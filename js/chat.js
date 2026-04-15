@@ -1,3 +1,4 @@
+//^
 import { notifyReaction, notifyMessage, notifyPhoto, notifyVoice, clearChatNotifications, signalUserActive } from './notifications.js';
 import { auth, db } from './firebase-config.js';
 import {
@@ -343,10 +344,12 @@ function listenForNewMessages() {
     renderMessage(newMsg);
     scrollToBottom();
 
-    if (newMsg.type === 'received' && newMsg.msgType !== 'call' && document.visibilityState !== 'visible') {
+    if (newMsg.type === 'received' && newMsg.msgType !== 'call') {
       const contacts = JSON.parse(localStorage.getItem('aschat_contacts') || '{}');
       const photo = contacts[otherID] ? contacts[otherID].photo : null;
-      // Pass myID as receiverID so backend knows which subscription to push to
+      // Always call notify* — notifications.js handles both layers:
+      //   Layer 1 (sendToSW):  suppressed internally by isViewingChat() if user is reading
+      //   Layer 2 (sendPush):  always sent to backend so OS can deliver when app fully closes
       if (newMsg.msgType === 'photo')      notifyPhoto(otherName, otherID, photo, myID);
       else if (newMsg.msgType === 'audio') notifyVoice(otherName, otherID, photo, myID);
       else                                 notifyMessage(otherName, otherID, newMsg.text || '', photo, myID);
